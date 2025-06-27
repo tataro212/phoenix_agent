@@ -69,6 +69,7 @@ pip install nougat-ocr
 
 ## Usage
 
+<<<<<<< HEAD
 ### 🎯 Interactive Mode (Recommended)
 
 The easiest way to use Phoenix Agent is through the interactive mode with file dialogs:
@@ -100,6 +101,8 @@ The interactive mode will:
 
 ### Command Line Mode
 
+=======
+>>>>>>> ef046a9256cf34a0f298c6a336a3eb4d3599a7d9
 ### Full Pipeline
 ```bash
 python phoenix_orchestrator.py input.pdf --target-language en --output-dir phoenix_output
@@ -143,8 +146,11 @@ phoenix_agent_v2/
 ├── document_reconstructor.py  # Station 3: Architect
 ├── toc_generator.py          # Station 4: Librarian
 ├── phoenix_orchestrator.py   # Main orchestrator
+<<<<<<< HEAD
 ├── run_interactive.py        # Interactive mode launcher
 ├── run_interactive.bat       # Windows batch launcher
+=======
+>>>>>>> ef046a9256cf34a0f298c6a336a3eb4d3599a7d9
 └── README.md                 # This file
 ```
 
