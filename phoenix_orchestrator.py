@@ -23,7 +23,7 @@ except ImportError:
 from document_blueprint import load_blueprint, save_blueprint, validate_blueprint
 from document_parser import parse_pdf_to_blueprint
 from visual_debugger import VisualDebugger
-from translation_service import translate_blueprint
+from translation_service import translate_blueprint, GeminiAPI, DummyGeminiAPI
 from document_reconstructor import reconstruct_from_blueprint
 from toc_generator import create_toc_from_reconstruction
 
@@ -41,6 +41,32 @@ class PhoenixOrchestrator:
         self.reconstructed_pdf_path = self.output_dir / "reconstructed_document.pdf"
         self.toc_pdf_path = self.output_dir / "table_of_contents.pdf"
         self.element_page_map_path = self.output_dir / "element_page_map.json"
+        
+        # Initialize translation API
+        self.gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        if not self.gemini_api_key:
+            # Try to read from GEMINI_API_KEY.txt in the project root
+            key_file = Path(__file__).parent / "GEMINI_API_KEY.txt"
+            if key_file.exists():
+                with open(key_file, "r") as f:
+                    self.gemini_api_key = f.read().strip()
+            if not self.gemini_api_key:
+                print("⚠️  WARNING: GEMINI_API_KEY environment variable not set and GEMINI_API_KEY.txt not found. Using DUMMY translator.")
+                self.translator_client = DummyGeminiAPI()
+            else:
+                try:
+                    self.translator_client = GeminiAPI(self.gemini_api_key)
+                except Exception as e:
+                    print(f"⚠️  Failed to initialize real Gemini API: {e}")
+                    print("⚠️  Falling back to DUMMY translator.")
+                    self.translator_client = DummyGeminiAPI()
+        else:
+            try:
+                self.translator_client = GeminiAPI(self.gemini_api_key)
+            except Exception as e:
+                print(f"⚠️  Failed to initialize real Gemini API: {e}")
+                print("⚠️  Falling back to DUMMY translator.")
+                self.translator_client = DummyGeminiAPI()
         
         # Initialize debugger
         self.debugger = VisualDebugger(str(self.output_dir / "debug_output"))
@@ -198,7 +224,7 @@ class PhoenixOrchestrator:
         finally:
             root.destroy()
     
-    def run_station_1_surveyor(self, pdf_path: str, page_images_dir: Optional[str] = None) -> bool:
+    def run_station_1_surveyor(self, pdf_path: str, page_images_dir: Optional[str] = None, nougat_model_path: Optional[str] = None) -> bool:
         """
         Station 1: The Surveyor
         Parses PDF to create document_blueprint.json
@@ -211,7 +237,7 @@ class PhoenixOrchestrator:
         
         try:
             # Parse PDF to blueprint
-            blueprint = parse_pdf_to_blueprint(pdf_path, output_json=str(self.blueprint_path))
+            blueprint = parse_pdf_to_blueprint(pdf_path, output_json=str(self.blueprint_path), nougat_model_path=nougat_model_path)
             
             if not blueprint:
                 print("❌ Station 1 failed: Could not create blueprint")
@@ -275,11 +301,13 @@ class PhoenixOrchestrator:
         print(f"Target Language: {target_language}")
         
         try:
-            # Translate blueprint
+            # Translate blueprint with strict JSON contract enforcement
             success = translate_blueprint(
                 str(self.blueprint_path),
                 str(self.translated_blueprint_path),
-                target_language
+                target_language,
+                gemini_api=self.translator_client,  # Pass the initialized client
+                strict_json_contract=True  # Enforce strict JSON contract
             )
             
             if success:
@@ -355,7 +383,8 @@ class PhoenixOrchestrator:
     
     def run_full_pipeline(self, pdf_path: str, target_language: str = "en", 
                          page_images_dir: Optional[str] = None, 
-                         skip_verification: bool = False) -> bool:
+                         skip_verification: bool = False,
+                         nougat_model_path: Optional[str] = None) -> bool:
         """
         Runs the complete Phoenix Agent pipeline.
         """
@@ -367,7 +396,7 @@ class PhoenixOrchestrator:
         print("="*80)
         
         # Station 1: Surveyor
-        if not self.run_station_1_surveyor(pdf_path, page_images_dir):
+        if not self.run_station_1_surveyor(pdf_path, page_images_dir, nougat_model_path):
             return False
         
         # Station 1 Verification (unless skipped)
@@ -489,6 +518,7 @@ def main():
                        help="Skip visual verification step")
     parser.add_argument("--station", choices=["1", "2", "3", "4"],
                        help="Run only a specific station")
+    parser.add_argument("--nougat-model-path", default="facebook/nougat-base", help="Path or name of the Nougat model to use (default: facebook/nougat-base)")
     
     args = parser.parse_args()
     
@@ -530,7 +560,7 @@ def main():
         # Run specific station
         station_num = int(args.station)
         if station_num == 1:
-            success = orchestrator.run_station_1_surveyor(args.pdf_path, args.page_images)
+            success = orchestrator.run_station_1_surveyor(args.pdf_path, args.page_images, args.nougat_model_path)
         elif station_num == 2:
             success = orchestrator.run_station_2_diplomat(args.target_language)
         elif station_num == 3:
@@ -543,7 +573,8 @@ def main():
             args.pdf_path, 
             args.target_language, 
             args.page_images, 
-            args.skip_verification
+            args.skip_verification,
+            args.nougat_model_path
         )
     
     if not success:

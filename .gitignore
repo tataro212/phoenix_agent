@@ -14,6 +14,7 @@ __pycache__/
 
 # Output directories
 phoenix_output/
+test_output/
 output/
 results/
 
@@ -39,4 +40,14 @@ logs/
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Test scripts (explicitly exclude)
+test_fixes.py
+test_nougat_station1.py
+test_simple_pipeline.py
+test_yolo.py
+debug_test.py
+
+# Large model files (explicitly exclude)
+yolov8n.pt 

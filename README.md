@@ -1,325 +1,234 @@
-# Phoenix Agent v2: Document Translation Pipeline
+# Phoenix Agent v2 - Document Translation Pipeline
 
-## Overview
+A sophisticated document translation system that preserves layout fidelity while translating content across languages. The Phoenix Agent uses an assembly-line approach with four specialized stations to process documents from PDF input to translated output.
 
-The Phoenix Agent is a transparent, sequential Assembly Line system for document analysis and translation. It follows the core philosophy of **"The Right Tool for the Right Job"** with absolute modularity and verifiability at every step.
+## 🚀 New Features & Fixes (Latest Update)
 
-## Core Architecture
+### ✅ **Dynamic Font Sizing**
+- **Problem Solved**: Content overflow in reconstructed PDFs
+- **Solution**: Intelligent font size reduction until text fits within bounding boxes
+- **Result**: Clean, professional-looking output without text cut-offs
 
-### Single Source of Truth: Document Blueprint
-- A structured JSON object (`DocumentBlueprint`) is the lifeblood of the system
-- Passed between stations on the assembly line with no side channels
-- Strictly validated schema using Python TypedDict
+### ✅ **Word Document Export**
+- **New Feature**: Export translated documents to Microsoft Word (.docx) format
+- **Benefits**: Easy editing, collaboration, and further formatting
+- **Integration**: Automatically generated alongside PDF output
 
-### Four-Station Assembly Line
+### ✅ **Enhanced Layout Preservation**
+- **Improved**: Table and image rendering with proper bounding box positioning
+- **Enhanced**: Better handling of complex document structures
+- **Result**: Higher fidelity to original document layout
 
-#### Station 1: The Surveyor (`document_parser.py`)
-**Job:** Creates flawless `document_blueprint.json` from source PDF
+### ✅ **Fixed Nougat Compatibility**
+- **Problem**: Dependency conflicts causing `ImageNetInfo` errors
+- **Solution**: Pinned dependency versions in `requirements.txt`
+- **Result**: Reliable OCR with superior text extraction quality
 
-**Tools Used:**
-- **YOLO (DocLayNet):** Identifies location and class of layout blocks
-- **Nougat:** High-fidelity OCR and structure extraction within blocks
-- **PyMuPDF:** Formatting property extraction (font, alignment, etc.)
+## 🏗️ Architecture Overview
 
-**Process:**
-1. **Pass 1:** High-level layout segmentation (YOLO at 300 DPI)
-2. **Pass 2:** Detailed content extraction (Nougat + PyMuPDF)
-3. **Pass 3:** Reading order determination
-4. **Verification:** Visual debugger creates colored, labeled boxes
+The Phoenix Agent operates as a four-station assembly line:
 
-#### Station 2: The Diplomat (`translation_service.py`)
-**Job:** Translates blueprint content with context-aware chunking
+### Station 1: The Surveyor 📋
+- **Purpose**: Analyzes PDF structure and extracts document blueprint
+- **Technology**: Nougat OCR + PyMuPDF fallback
+- **Output**: `document_blueprint.json` with spatial coordinates
 
-**Core Tactic:** Isolate Language from Structure
-- LLM only translates strings, never generates formatting
-- Structure preserved in Blueprint's type and properties fields
+### Station 2: The Diplomat 🌍
+- **Purpose**: Translates content while preserving structure
+- **Technology**: Google Gemini API with context-aware chunking
+- **Output**: `translated_blueprint.json`
 
-**Context-Aware Translation:**
-- **Semantic Context:** Preceding/following sentences
-- **Structural Context:** Element type metadata
-- **Structured Prompt:** XML-like format for clear role demarcation
+### Station 3: The Architect 🏛️
+- **Purpose**: Reconstructs document with layout fidelity
+- **Technology**: ReportLab with dynamic font sizing
+- **Output**: `reconstructed_document.pdf`
 
-#### Station 3: The Architect (`document_reconstructor.py`)
-**Job:** Transforms translated blueprint into concrete PDF
+### Station 4: The Librarian 📚
+- **Purpose**: Generates interactive Table of Contents
+- **Technology**: ReportLab with hyperlinks
+- **Output**: `table_of_contents.pdf`
 
-**Blueprint-Driven Engineering:**
-- Every visual aspect dictated by Blueprint properties
-- Direct mapping from properties to ReportLab parameters
-- Perfect structure preservation through 1:1 property translation
+### Station 5: The Scribe ✍️ (NEW)
+- **Purpose**: Exports to Microsoft Word format
+- **Technology**: python-docx with proper formatting
+- **Output**: `translated_document.docx`
 
-#### Station 4: The Librarian (`toc_generator.py`)
-**Job:** Generates pixel-perfect, interactive Table of Contents
+## 🛠️ Installation & Setup
 
-**Two-Pass Compilation:**
-- **Pass 1:** Document compilation with bookmark creation
-- **Pass 2:** TOC generation with hyperlinks and dot leaders
+### Prerequisites
+- Python 3.10
+- Anaconda or Miniconda
+- Google Gemini API key (optional, uses dummy translator if not provided)
 
-## Installation
+### Quick Setup (Recommended)
 
-```bash
-# Install required dependencies
-pip install reportlab pymupdf opencv-python pillow numpy
-
-# For YOLO integration (when ready)
-pip install ultralytics
-
-# For Nougat integration (when ready)
-pip install nougat-ocr
-```
-
-## Usage
-
-<<<<<<< HEAD
-### 🎯 Interactive Mode (Recommended)
-
-The easiest way to use Phoenix Agent is through the interactive mode with file dialogs:
-
-#### Option 1: Double-click launcher (Windows)
-```bash
-# Simply double-click this file:
-run_interactive.bat
-```
-
-#### Option 2: Python launcher
-```bash
-# Run the interactive launcher
-python run_interactive.py
-```
-
-#### Option 3: Command line interactive mode
-```bash
-# Use the --interactive flag
-python phoenix_orchestrator.py --interactive
-```
-
-The interactive mode will:
-1. **Open a file dialog** to select your input PDF file
-2. **Open a folder dialog** to choose where to save the translation
-3. **Show a language selection dialog** to pick the target language
-4. **Confirm your choices** before starting the translation
-5. **Run the complete pipeline** automatically
-
-### Command Line Mode
-
-=======
->>>>>>> ef046a9256cf34a0f298c6a336a3eb4d3599a7d9
-### Full Pipeline
-```bash
-python phoenix_orchestrator.py input.pdf --target-language en --output-dir phoenix_output
-```
-
-### Individual Stations
-```bash
-# Station 1: Surveyor
-python phoenix_orchestrator.py input.pdf --station 1
-
-# Station 2: Diplomat
-python phoenix_orchestrator.py input.pdf --station 2 --target-language es
-
-# Station 3: Architect
-python phoenix_orchestrator.py input.pdf --station 3
-
-# Station 4: Librarian
-python phoenix_orchestrator.py input.pdf --station 4
-```
-
-### Advanced Options
-```bash
-# With visual verification
-python phoenix_orchestrator.py input.pdf --page-images page_images_dir
-
-# Skip verification
-python phoenix_orchestrator.py input.pdf --skip-verification
-
-# Custom output directory
-python phoenix_orchestrator.py input.pdf --output-dir my_output
-```
-
-## File Structure
-
-```
-phoenix_agent_v2/
-├── document_blueprint.py      # Single source of truth schema
-├── document_parser.py         # Station 1: Surveyor
-├── visual_debugger.py         # Verification tool
-├── translation_service.py     # Station 2: Diplomat
-├── document_reconstructor.py  # Station 3: Architect
-├── toc_generator.py          # Station 4: Librarian
-├── phoenix_orchestrator.py   # Main orchestrator
-<<<<<<< HEAD
-├── run_interactive.py        # Interactive mode launcher
-├── run_interactive.bat       # Windows batch launcher
-=======
->>>>>>> ef046a9256cf34a0f298c6a336a3eb4d3599a7d9
-└── README.md                 # This file
-```
-
-## Output Files
-
-After running the pipeline, you'll find:
-
-```
-phoenix_output/
-├── document_blueprint.json           # Original blueprint
-├── translated_blueprint.json         # Translated blueprint
-├── reconstructed_document.pdf        # Final PDF
-├── table_of_contents.pdf            # Interactive TOC
-├── element_page_map.json            # Page mapping for TOC
-└── debug_output/                    # Visual verification images
-    ├── debug_page_001.png
-    ├── debug_page_002.png
-    ├── element_legend.png
-    └── debug_summary.txt
-```
-
-## Implementation Details
-
-### Document Blueprint Schema
-```python
-class DocumentBlueprint(TypedDict):
-    metadata: DocumentMetadata
-    pages: List[Page]
-
-class DocumentElement(TypedDict):
-    id: str
-    type: ElementType
-    bbox: Tuple[float, float, float, float]
-    content: str
-    properties: ElementProperties
-    children: List[DocumentElement]
-```
-
-### Translation Prompt Template
-```xml
-<System>
-You are an expert academic translator...
-**RULES:**
-1. Translate ONLY the content within the <TRANSLATE_THIS> tag.
-2. Do NOT translate the content in the <CONTEXT_...> tags.
-3. The number of paragraphs MUST exactly match...
-4. Do NOT add any formatting, markdown, or commentary.
-</System>
-
-<ContextualInformation>
-    <PrecedingText>...</PrecedingText>
-    <FollowingText>...</FollowingText>
-    <StructuralHints>...</StructuralHints>
-</ContextualInformation>
-
-<TRANSLATE_THIS>
-Content to translate...
-</TRANSLATE_THIS>
-```
-
-### Element Rendering Engine
-```python
-# Direct property mapping from blueprint to ReportLab
-style = ParagraphStyle(
-    fontName=element['properties']['font_name'],
-    fontSize=element['properties']['font_size'],
-    alignment=alignment_map[element['properties']['alignment']],
-    firstLineIndent=element['properties']['indentation']
-)
-```
-
-## Integration Points
-
-### YOLO Integration
-Replace `DummyYOLOModel` in `document_parser.py`:
-```python
-from ultralytics import YOLO
-yolo_model = YOLO('path/to/your/trained/model.pt')
-```
-
-### Nougat Integration
-Replace `DummyNougatModel` in `document_parser.py`:
-```python
-from nougat import NougatModel
-nougat_model = NougatModel.from_pretrained("facebook/nougat-base")
-```
-
-### Gemini API Integration
-Replace `DummyGeminiAPI` in `translation_service.py`:
-```python
-import google.generativeai as genai
-genai.configure(api_key='your_api_key')
-model = genai.GenerativeModel('gemini-pro')
-```
-
-## Verification and Quality Assurance
-
-### Visual Debugger
-- Creates colored, labeled bounding boxes for each element
-- Generates summary report with element statistics
-- Provides element type legend
-- **Non-negotiable step** before proceeding to translation
-
-### Validation
-- Schema validation at every step
-- Blueprint integrity checks
-- Translation chunk validation
-- Page mapping verification
-
-## Error Handling
-
-The system includes comprehensive error handling:
-- Input validation
-- Model loading failures
-- Translation errors
-- PDF generation issues
-- Graceful degradation with warnings
-
-## Performance Considerations
-
-- **Parallel Processing:** Each station can run independently
-- **Caching:** Translation results can be cached
-- **Memory Management:** Large documents processed page by page
-- **GPU Acceleration:** YOLO and Nougat can use GPU when available
-
-## Future Enhancements
-
-- **Real-time Processing:** Stream processing for large documents
-- **Batch Processing:** Multiple document pipeline
-- **Custom Models:** Fine-tuned models for specific domains
-- **API Service:** REST API for cloud deployment
-- **GUI Interface:** Web-based user interface
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Missing Dependencies**
+1. **Clone the repository**:
    ```bash
+   git clone <repository-url>
+   cd phoenix_agent_v2
+   ```
+
+2. **Run the automated setup script**:
+   ```bash
+   # Windows (PowerShell)
+   .\setup_clean_env.ps1
+   
+   # Or manually:
+   conda create --name phoenix_final python=3.10 -y
+   conda activate phoenix_final
    pip install -r requirements.txt
    ```
 
-2. **Model Loading Errors**
-   - Ensure YOLO model path is correct
-   - Check Nougat model availability
-   - Verify API keys for Gemini
+3. **Set up API key** (optional):
+   ```bash
+   # Windows
+   set GEMINI_API_KEY=your_api_key_here
+   
+   # Linux/Mac
+   export GEMINI_API_KEY=your_api_key_here
+   ```
 
-3. **Memory Issues**
-   - Process documents page by page
-   - Use smaller batch sizes
-   - Enable GPU acceleration
+### Manual Installation
 
-4. **Translation Quality**
-   - Adjust chunking parameters
-   - Fine-tune prompt templates
-   - Use domain-specific models
+If the automated setup fails, install dependencies manually:
 
-## Contributing
+```bash
+# Core ML dependencies (pinned for compatibility)
+pip install torch==2.1.0 torchvision==0.16.0 timm==0.6.13
 
-The Phoenix Agent follows strict architectural principles:
-- **Single Responsibility:** Each module has one job
-- **Transparency:** All data flows are explicit
-- **Verifiability:** Every step produces inspectable artifacts
-- **Modularity:** Components can be replaced independently
+# Nougat + dependencies
+pip install pydantic<2.0 albumentations==1.3.1 nougat-ocr
 
-## License
+# Application dependencies
+pip install ultralytics PyMuPDF reportlab python-docx
 
-This project follows the same license as the parent repository.
+# Core Python
+pip install numpy<2.0.0 opencv-python Pillow google-generativeai
+```
+
+## 🚀 Usage
+
+### Interactive Mode (Recommended)
+```bash
+python phoenix_orchestrator.py --interactive
+```
+This opens file dialogs to select:
+- Input PDF file
+- Output directory
+- Target language (defaults to Greek)
+
+### Command Line Mode
+```bash
+# Basic usage
+python phoenix_orchestrator.py input.pdf --target-language el
+
+# With custom output directory
+python phoenix_orchestrator.py input.pdf -o my_output -t el
+
+# Skip verification for faster processing
+python phoenix_orchestrator.py input.pdf -t el --skip-verification
+
+# Run specific station only
+python phoenix_orchestrator.py input.pdf --station 3
+```
+
+### Available Options
+- `--interactive, -i`: Use file dialogs for input selection
+- `--target-language, -t`: Target language code (default: en)
+- `--output-dir, -o`: Output directory (default: phoenix_output)
+- `--page-images, -p`: Directory with page images for verification
+- `--skip-verification, -s`: Skip visual verification step
+- `--station`: Run only a specific station (1-5)
+- `--nougat-model-path`: Custom Nougat model path
+
+## 📊 Output Files
+
+After successful processing, you'll find these files in your output directory:
+
+- `document_blueprint.json` - Original document structure
+- `translated_blueprint.json` - Translated document structure
+- `reconstructed_document.pdf` - Final translated PDF
+- `table_of_contents.pdf` - Interactive TOC with hyperlinks
+- `translated_document.docx` - Word document version
+- `element_page_map.json` - Mapping for TOC generation
+- `debug_output/` - Visual verification images
+
+## 🧪 Testing
+
+Run the comprehensive test suite to verify all fixes:
+
+```bash
+python test_fixes.py
+```
+
+This tests:
+- ✅ Nougat compatibility
+- ✅ Dynamic font sizing
+- ✅ Word export functionality
+- ✅ Orchestrator integration
+- ✅ All dependencies
+
+## 🔧 Troubleshooting
+
+### Nougat Import Errors
+If you see `ImageNetInfo` errors:
+1. Ensure you're using the pinned versions in `requirements.txt`
+2. Rebuild the environment: `conda create --name phoenix_final python=3.10 -y`
+3. Install dependencies in order: ML → Nougat → Application
+
+### Content Overflow Issues
+The dynamic font sizing should handle most overflow cases automatically. If you still see issues:
+- Check the console output for font size reduction messages
+- Verify the bounding box coordinates in the blueprint
+- Consider adjusting the minimum font size (currently 6pt)
+
+### Word Export Issues
+If Word export fails:
+- Ensure `python-docx` is installed: `pip install python-docx`
+- Check that the translated blueprint is valid
+- Verify write permissions in the output directory
+
+## 🎯 Key Improvements
+
+### Layout Fidelity
+- **Before**: Text flowed like a simple document
+- **After**: Precise positioning using bounding box coordinates
+- **Result**: Maintains original document structure
+
+### Content Overflow Handling
+- **Before**: Text cut off or warnings ignored
+- **After**: Intelligent font size reduction
+- **Result**: All content fits properly
+
+### Multiple Output Formats
+- **Before**: PDF only
+- **After**: PDF + Word + Interactive TOC
+- **Result**: Flexible output options for different use cases
+
+### Reliability
+- **Before**: Dependency conflicts
+- **After**: Pinned versions and fallback mechanisms
+- **Result**: Consistent, reproducible results
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the test suite: `python test_fixes.py`
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **Nougat Team**: For the excellent OCR model
+- **Google Gemini**: For the translation API
+- **ReportLab**: For PDF generation capabilities
+- **PyMuPDF**: For PDF processing and fallback OCR
 
 ---
 
-**The Phoenix Agent: Where transparency meets precision in document translation.** 
+**Phoenix Agent v2** - Transforming documents while preserving their soul. 🚀 

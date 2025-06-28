@@ -128,7 +128,7 @@ def validate_page(page: dict) -> bool:
         
         # Validate dimensions
         dimensions = page["dimensions"]
-        if not isinstance(dimensions, tuple) or len(dimensions) != 2:
+        if not isinstance(dimensions, (tuple, list)) or len(dimensions) != 2:
             return False
         if not all(isinstance(d, (int, float)) for d in dimensions):
             return False
@@ -155,113 +155,111 @@ def validate_page(page: dict) -> bool:
 
 
 def validate_element(element: dict) -> bool:
-    """Validates a single element structure."""
-    try:
-        if not isinstance(element, dict):
-            return False
-        
-        required_element_fields = ["id", "type", "bbox", "content", "properties", "children"]
-        for field in required_element_fields:
-            if field not in element:
-                return False
-        
-        # Validate id
-        if not isinstance(element["id"], str):
-            return False
-        
-        # Validate type
-        valid_types = [
-            'paragraph', 'heading_1', 'heading_2', 'heading_3',
-            'list_item', 'table', 'image', 'caption', 'footer', 'header', 'toc_item'
-        ]
-        if element["type"] not in valid_types:
-            return False
-        
-        # Validate bbox
-        bbox = element["bbox"]
-        if not isinstance(bbox, tuple) or len(bbox) != 4:
-            return False
-        if not all(isinstance(coord, (int, float)) for coord in bbox):
-            return False
-        
-        # Validate content
-        if not isinstance(element["content"], str):
-            return False
-        
-        # Validate properties
-        if not validate_properties(element["properties"]):
-            return False
-        
-        # Validate children
-        if not isinstance(element["children"], list):
-            return False
-        for child in element["children"]:
-            if not validate_element(child):
-                return False
-        
-        return True
-        
-    except Exception:
+    """Validates a single element structure with detailed error logging."""
+    if not isinstance(element, dict):
+        print(f"Validation Error: Element is not a dictionary.")
         return False
 
+    required_element_fields = ["id", "type", "bbox", "content", "properties", "children"]
+    for field in required_element_fields:
+        if field not in element:
+            # Try to get element ID for a better error message, otherwise show the partial element
+            element_id = element.get('id', 'Unknown ID')
+            print(f"Validation Error: Element '{element_id}' is missing required key: '{field}'.")
+            return False
 
-def validate_properties(properties: dict) -> bool:
-    """Validates element properties structure."""
-    try:
-        if not isinstance(properties, dict):
-            return False
-        
-        required_property_fields = [
-            "font_name", "font_size", "font_weight", "is_italic", 
-            "text_color", "alignment", "indentation", "list_level", "list_style"
-        ]
-        for field in required_property_fields:
-            if field not in properties:
-                return False
-        
-        # Validate font_name
-        if not isinstance(properties["font_name"], str):
-            return False
-        
-        # Validate font_size
-        if not isinstance(properties["font_size"], (int, float)):
-            return False
-        
-        # Validate font_weight
-        if properties["font_weight"] not in ["normal", "bold"]:
-            return False
-        
-        # Validate is_italic
-        if not isinstance(properties["is_italic"], bool):
-            return False
-        
-        # Validate text_color
-        text_color = properties["text_color"]
-        if not isinstance(text_color, tuple) or len(text_color) != 3:
-            return False
-        if not all(isinstance(c, (int, float)) and 0 <= c <= 1 for c in text_color):
-            return False
-        
-        # Validate alignment
-        if properties["alignment"] not in ["left", "center", "right", "justify"]:
-            return False
-        
-        # Validate indentation
-        if not isinstance(properties["indentation"], (int, float)):
-            return False
-        
-        # Validate list_level
-        if not isinstance(properties["list_level"], int):
-            return False
-        
-        # Validate list_style
-        if properties["list_style"] not in ["bullet", "numbered", "none"]:
-            return False
-        
-        return True
-        
-    except Exception:
+    element_id = element["id"] # We know this exists now
+
+    # Validate types
+    if not isinstance(element_id, str):
+        print(f"Validation Error: Element '{element_id}' -> 'id' is not a string.")
         return False
+    
+    valid_types = [
+        'paragraph', 'heading_1', 'heading_2', 'heading_3',
+        'list_item', 'table', 'image', 'caption', 'footer', 'header', 'toc_item'
+    ]
+    if element["type"] not in valid_types:
+        print(f"Validation Error: Element '{element_id}' -> 'type' is invalid: '{element['type']}'.")
+        return False
+
+    bbox = element["bbox"]
+    if not isinstance(bbox, (tuple, list)) or len(bbox) != 4:
+        print(f"Validation Error: Element '{element_id}' -> 'bbox' must be a tuple or list of length 4, but was {type(bbox)} with length {len(bbox) if hasattr(bbox, '__len__') else 'N/A'}.")
+        return False
+    if not all(isinstance(coord, (int, float)) for coord in bbox):
+        print(f"Validation Error: Element '{element_id}' -> 'bbox' must contain only numbers.")
+        return False
+
+    if not isinstance(element["content"], str):
+        print(f"Validation Error: Element '{element_id}' -> 'content' is not a string.")
+        return False
+
+    if not isinstance(element["children"], list):
+        print(f"Validation Error: Element '{element_id}' -> 'children' is not a list.")
+        return False
+    for child in element["children"]:
+        if not validate_element(child): # Recursive call
+            return False
+
+    # Validate properties dictionary
+    if not validate_properties(element["properties"], element_id):
+        return False
+
+    return True
+
+
+def validate_properties(properties: dict, element_id: str) -> bool:
+    """Validates element properties structure with detailed error logging."""
+    if not isinstance(properties, dict):
+        print(f"Validation Error: Element '{element_id}' -> 'properties' is not a dictionary.")
+        return False
+
+    required_property_fields = [
+        "font_name", "font_size", "font_weight", "is_italic",
+        "text_color", "alignment", "indentation", "list_level", "list_style"
+    ]
+    for field in required_property_fields:
+        if field not in properties:
+            print(f"Validation Error: Element '{element_id}' -> 'properties' is missing required key: '{field}'.")
+            return False
+
+    # Validate types of properties
+    if not isinstance(properties["font_name"], str):
+        print(f"Validation Error: Element '{element_id}' -> 'font_name' is not a string.")
+        return False
+    if not isinstance(properties["font_size"], (int, float)):
+        print(f"Validation Error: Element '{element_id}' -> 'font_size' is not a number.")
+        return False
+    if properties["font_weight"] not in ["normal", "bold"]:
+        print(f"Validation Error: Element '{element_id}' -> 'font_weight' is invalid: '{properties['font_weight']}'.")
+        return False
+    if not isinstance(properties["is_italic"], bool):
+        print(f"Validation Error: Element '{element_id}' -> 'is_italic' is not a boolean.")
+        return False
+    
+    text_color = properties["text_color"]
+    if not isinstance(text_color, (tuple, list)) or len(text_color) != 3:
+        print(f"Validation Error: Element '{element_id}' -> 'text_color' must be a tuple or list of length 3.")
+        return False
+    if not all(isinstance(c, (int, float)) and 0 <= c <= 1 for c in text_color):
+        print(f"Validation Error: Element '{element_id}' -> 'text_color' values must be numbers between 0 and 1.")
+        return False
+    
+    if properties["alignment"] not in ["left", "center", "right", "justify"]:
+        print(f"Validation Error: Element '{element_id}' -> 'alignment' is invalid: '{properties['alignment']}'.")
+        return False
+    if not isinstance(properties["indentation"], (int, float)):
+        print(f"Validation Error: Element '{element_id}' -> 'indentation' is not a number.")
+        return False
+    if not isinstance(properties["list_level"], int):
+        print(f"Validation Error: Element '{element_id}' -> 'list_level' is not an integer.")
+        return False
+    if properties["list_style"] not in ["bullet", "numbered", "none"]:
+        print(f"Validation Error: Element '{element_id}' -> 'list_style' is invalid: '{properties['list_style']}'.")
+        return False
+
+    return True
 
 
 def save_blueprint(blueprint: DocumentBlueprint, file_path: str) -> bool:
